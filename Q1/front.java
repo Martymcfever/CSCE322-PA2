@@ -1,6 +1,8 @@
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class front {
 
@@ -14,6 +16,10 @@ public class front {
     static int nextToken;
     static String readInput;
     static String output = "";
+    static boolean endOfFile = false; // New flag to track EOF
+
+    // Reserved Keywords
+    static Set<String> reservedKeywords = new HashSet<>();
 
     // Character Classes
     final static int LETTER = 0;
@@ -36,20 +42,38 @@ public class front {
     final static int LEFT_CURLY = 32;
     final static int RIGHT_CURLY = 33;
     final static int PERIOD = 34;
+    final static int KEYWORD = 40; // New token code for keywords
+    final static int RETURN = 41;
 
     public static void main(String[] args) {
+        // Initialize reserved keywords
+        reservedKeywords.add("int");
+        reservedKeywords.add("float");
+        reservedKeywords.add("char");
+        reservedKeywords.add("double");
+
         // Replace the pathname with the path of your file
-        File input = new File("C://Users//greym//CSCE322-PA2//front.txt");
+        // Influenced by buffered reader example from https://www.geeksforgeeks.org/different-ways-reading-text-file-java/
+        File input = new File("Enter local filepath");
         try (BufferedReader br = new BufferedReader(new FileReader(input))) {
             while ((readInput = br.readLine()) != null) {
                 lexLen = readInput.length();
+                System.out.println(readInput);
+                
                 getChar();
 
                 do {
+                    
                     lex();
-                } while (nextToken != EOF);
+                    System.out.println(lexme);
+                } while (nextToken != EOF && lexCounter < lexLen);
+
                 lexCounter = 0;
+
+                
             }
+            endOfFile = true; // Set the EOF flag at the end of the file
+            lex(); // Call lex one last time to output EOF
         } catch (IOException e) {
             System.out.println("File not Found");
         }
@@ -157,6 +181,12 @@ public class front {
     }
 
     public static int lex() {
+        if (endOfFile && charClass == EOF) {
+            nextToken = EOF;
+            System.out.printf("Next token is: %d, Next Lexeme is EOF%n", nextToken);
+            return nextToken;
+        }
+
         getNonBlank();
         switch (charClass) {
             case LETTER:
@@ -168,13 +198,26 @@ public class front {
                     addChar();
                     getChar();
                 }
-                nextToken = IDENT;
+                if (reservedKeywords.contains(output)) {
+                    nextToken = KEYWORD; // Recognize reserved keyword
+                }
+                else if(output.equals("return"))
+                {
+                    nextToken = RETURN;
+                } 
+                else {
+                    nextToken = IDENT; // Otherwise, treat it as an identifier
+                }
                 break;
             case DIGIT:
                 output += nextChar;
                 addChar();
                 getChar();
-                while (charClass == DIGIT) {
+                boolean isFloat = false;
+                while (charClass == DIGIT || (!isFloat && nextChar == '.')) {
+                    if (nextChar == '.') {
+                        isFloat = true;
+                    }
                     output += nextChar;
                     addChar();
                     getChar();
@@ -187,7 +230,6 @@ public class front {
                 break;
             case EOF:
                 nextToken = EOF;
-                output += "EOF";
                 break;
         }
         System.out.printf("Next token is: %d, Next Lexeme is %s%n", nextToken, output);
